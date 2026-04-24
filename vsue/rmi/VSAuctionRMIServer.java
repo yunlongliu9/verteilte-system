@@ -1,11 +1,9 @@
-package vsue;
+package vsue.rmi;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import vsue.rmi.VSAuctionEventHandler;
-import vsue.rmi.VSAuctionServiceImpl;
 
 public class VSAuctionRMIServer {   
     public static void main(String[] args) {

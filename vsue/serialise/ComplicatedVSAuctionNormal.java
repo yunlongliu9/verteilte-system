@@ -17,15 +17,11 @@ import java.io.Serializable;
 public class ComplicatedVSAuctionNormal implements Serializable {
 
     String name;
-
     int price;
-List<String> bids;
+    List<String> bids;
     String description;
-
     long timestamp;
-
     double rating;
-
     // ❗ 必须要有无参构造函数
     public ComplicatedVSAuctionNormal() {
     }
