@@ -12,7 +12,7 @@ import vsue.rmi.VSAuctionService;
 
 public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAuctionService {
 
-    private Map<String, VSAuctionData> auctions = new HashMap();// phone, auctiondata
+    private final Map<String, VSAuctionData> auctions = new HashMap();// phone, auctiondata
 
     public VSAuctionServiceImpl() throws RemoteException {
         super();
@@ -22,7 +22,7 @@ public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAucti
     public void registerAuction(VSAuction auction, int duration, VSAuctionEventHandler handler) throws VSAuctionException {
         // TODO Auto-generated method stub
         VSAuctionData auctionData = new VSAuctionData(auction, handler);
-        synchronized (this) {
+        synchronized (auctions) {
             if (auction.getName() == null || auction.getName().isEmpty()) {
                 throw new VSAuctionException("Auction name cannot be null or empty.");
             }
@@ -41,7 +41,7 @@ public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAucti
         VSAuctionData ended = null;
         try {
             Thread.sleep(duration * 1000);
-            synchronized (this) {
+            synchronized (auctions) {
                     ended = auctions.remove(auctionData.getName());
                 }
             } catch (InterruptedException e) {
@@ -74,14 +74,16 @@ public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAucti
     }
 
     @Override
-    public synchronized VSAuction[] getAuctions() {
-        if (auctions.isEmpty()) {
-            System.out.println("No auctions currently in progress.");
-            return null;
-        }else{
-            return auctions.values().stream()
-            .map(VSAuctionData::getAuction)
-            .toArray(VSAuction[]::new);
+    public  VSAuction[] getAuctions() {
+        synchronized (auctions) {
+            if (auctions.isEmpty()) {
+                System.out.println("No auctions currently in progress.");
+                return null;
+            } else {
+                return auctions.values().stream()
+                        .map(VSAuctionData::getAuction)
+                        .toArray(VSAuction[]::new);
+            }
         }
     }
 
@@ -95,13 +97,15 @@ public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAucti
             throw new VSAuctionException("Bid price must be positive.");
         }
         
-        VSAuctionData auctionData = auctions.get(auctionName);// store the probable former winner's info
-        VSAuctionData beforeWinnerData = auctionData != null ? new VSAuctionData(
+        VSAuctionData auctionData = null;// store the probable former winner's info
+        VSAuctionData beforeWinnerData = null;
+        synchronized (auctions) {
+              auctionData = auctions.get(auctionName);// store the probable former winner's info
+         beforeWinnerData = auctionData != null ? new VSAuctionData(
             auctionData.getAuction(),
             auctionData.getCreatorHandler(),
             auctionData.getWinnerHandler()
         ) : null;
-        synchronized (this) {
             if (auctionData == null) {
                 throw new VSAuctionException("No auction with the specified name is currently in progress.");   
             }
