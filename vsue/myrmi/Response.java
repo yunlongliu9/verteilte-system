@@ -1,4 +1,4 @@
-package vsue.myrmi;
+package myrmi;
 import java.io.Serializable;
 
 public class Response implements Serializable {

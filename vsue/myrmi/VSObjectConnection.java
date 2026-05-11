@@ -1,4 +1,4 @@
-package vsue.myrmi;
+package myrmi;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,5 +29,9 @@ public class VSObjectConnection {
         ObjectInputStream ois = new ObjectInputStream(bis);
 
         return ois.readObject();
+    }
+
+    public void close() throws IOException {
+        conn.close();
     }
 }

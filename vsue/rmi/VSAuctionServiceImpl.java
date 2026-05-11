@@ -33,6 +33,7 @@ public class VSAuctionServiceImpl extends UnicastRemoteObject implements VSAucti
                 throw new VSAuctionException("An auction with the same name already exists.");
             }  
             this.auctions.put(auction.getName(), auctionData);
+            System.out.println("Auction registered: " + auction.getName() + " (Duration: " + duration + "s)");  
         } 
 
         

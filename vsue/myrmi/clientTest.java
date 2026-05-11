@@ -1,4 +1,4 @@
-package vsue.myrmi;
+package myrmi;
 
 import java.net.Socket;
 
