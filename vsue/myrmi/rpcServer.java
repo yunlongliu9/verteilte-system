@@ -1,4 +1,4 @@
-package myrmi;
+package vsue.myrmi;
 
 import java.lang.reflect.Method;
 import java.io.EOFException;

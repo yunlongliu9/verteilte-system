@@ -2,7 +2,9 @@ package vsue.rpc;
 
 import java.net.ServerSocket;
 import java.net.Socket;
-
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.Remote;
 import vsue.rmi.VSAuctionService;
 import vsue.rmi.VSAuctionServiceImpl;
 
@@ -14,7 +16,7 @@ public class VSAuctionServer {
              * create real service object
              * 
              */
-
+             Registry registry = LocateRegistry.createRegistry(1099);
             VSAuctionService auctionService =
                     new VSAuctionServiceImpl();
             /*
@@ -26,12 +28,13 @@ public class VSAuctionServer {
              * bind into registry
              * 
              */
-            VSRemoteObjectManager
+            Remote stub = VSRemoteObjectManager
                     .getInstance()
                     .exportObject(
-                            "auctionService",
-                            auctionService
+                            auctionService,
+                            12345
                     );
+                   registry.bind("auctionService", stub);
             System.out.println(
                     "Auction service exported."
             );
@@ -40,11 +43,12 @@ public class VSAuctionServer {
              * start RPC server
              * 
              */
-            VSServer server =
-                    new VSServer(12345);
+            VSServer server = new VSServer(12345);
             server.start();
         } catch (Exception e) {
             e.printStackTrace();
+        }finally {
+            System.out.println("Server setup complete.");
         }
     }
 }

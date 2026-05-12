@@ -1,4 +1,4 @@
-package myrmi;
+package vsue.myrmi;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -1,4 +1,3 @@
-#!/bin/bash
 
 # clean old classes
 rm -rf out

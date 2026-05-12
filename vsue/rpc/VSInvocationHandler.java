@@ -9,6 +9,10 @@ import vsue.myrmi.VSObjectConnection;
 
 public class VSInvocationHandler implements Serializable,InvocationHandler  {
     private VSRemoteReference remoteReference;
+
+    public VSRemoteReference getRemoteReference() {
+        return remoteReference;
+    }
     
 
     public VSInvocationHandler(VSRemoteReference remoteReference) {

@@ -1,4 +1,4 @@
-package myrmi;
+package vsue.myrmi;
 
 import java.net.Socket;
 import vsue.rmi.VSAuction;

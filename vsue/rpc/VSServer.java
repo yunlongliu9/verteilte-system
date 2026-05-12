@@ -8,51 +8,151 @@ import vsue.myrmi.VSObjectConnection;
 import vsue.rmi.VSAuctionService;
 import vsue.rmi.VSAuctionServiceImpl;
 
+
+
 public class VSServer {
+    /**
+     * basic communication server for RPC
+     * start a server socket, listen for incoming connections, and handle requests
+     * **/
+
     private int port;
     public VSServer(int port) {
         this.port = port;
     }
 
     private void handleRequest(Socket clientSocket) {
-        Object result = null;
-        Throwable throwable = null;
+
         VSObjectConnection objectConnection = null;
+
         try {
-            objectConnection = new VSObjectConnection(new VSConnection(clientSocket));
-            RequestMessage request = (RequestMessage) objectConnection.receiveObject();
-            result = VSRemoteObjectManager.getInstance()
-                    .invokeMethod(
-                            request.getObjectId(),
-                            request.getMethodName(),
-                            request.getParameters());
-            // proxy, Method method, Object[] args
-        } catch (Exception e) {
-            throwable = e;
-            System.err.println("⚠️  Exception occurred while handling request: " + e.getMessage());
-        } finally {
-            if (objectConnection != null){
+
+            objectConnection =
+
+                    new VSObjectConnection(
+
+                            new VSConnection(clientSocket)
+
+                    );
+
+            /*
+             *
+             * 
+             * 
+             * keep connection alive
+             *
+             * 
+             * 
+             */
+
+            while (true) {
+
                 try {
-                    objectConnection.sendObject(new ReplyMessage(result, throwable));
-                    objectConnection.close();
+
+                    RequestMessage request =
+
+                            (RequestMessage)
+
+                            objectConnection.receiveObject();
+
+                    Object result =
+
+                            VSRemoteObjectManager
+
+                                    .getInstance()
+
+                                    .invokeMethod(
+
+                                            request.getObjectId(),
+
+                                            request.getMethodName(),
+
+                                            request.getParameters()
+
+                                    );
+
+                    objectConnection.sendObject(
+
+                            new ReplyMessage(
+
+                                    result,
+
+                                    null
+
+                            )
+
+                    );
+
+                } catch (java.io.EOFException eof) {
+
+                    /*
+                     *
+                     * 
+                     * 
+                     * client disconnected normally
+                     *
+                     * 
+                     * 
+                     */
+
+
+                    break;
+
                 } catch (Exception e) {
-                    System.err.println("⚠️  Failed to close object connection: " + e.getMessage());
+
+                    System.err.println(
+
+                            "⚠️ RPC error: "
+
+                                    + e
+
+                    );
+
+                    objectConnection.sendObject(
+
+                            new ReplyMessage(
+
+                                    null,
+
+                                    e
+
+                            )
+
+                    );
+
                 }
-            }else{
-                try {
-                    clientSocket.close();
-                } catch (Exception e) {
-                    System.err.println("⚠️  Failed to close client socket: " + e.getMessage());
-                }
+
             }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+        } finally {
+
+            try {
+
+                if (objectConnection != null) {
+
+                    objectConnection.close();
+
+                }
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+
+            }
+
         }
+
     }
 
     public void start() {
         ServerSocket serverSocket = null;
         try  {
             serverSocket = new ServerSocket(port);
-            System.out.println("VSServer is running on port " + port);
+            System.out.println("Server is running on port " + port);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 new Thread(() -> {

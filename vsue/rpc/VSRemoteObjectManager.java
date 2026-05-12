@@ -9,37 +9,27 @@ import java.rmi.registry.LocateRegistry;
 
 public class VSRemoteObjectManager  {
     /*
-     * Java RMI registry
+     * export + invoke; 
+    * server and client can use this;
      */
-    private Registry registry;
     private Map<Integer, Object> objectRegistry = new HashMap<>();
     private static VSRemoteObjectManager instance =new VSRemoteObjectManager();
     private int nextObjectId = 1;
     private VSRemoteObjectManager() {
-            try {
-                registry = LocateRegistry.createRegistry(1099);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+           
     }
     public static VSRemoteObjectManager getInstance() {
         return instance;
     }
 
-    public Remote exportObject(String serviceName,Object obj) {
+    public Remote exportObject(Object obj,int port) throws Exception {
         int objectId = nextObjectId++;
         objectRegistry.put(objectId, obj);
         Remote stub =  (Remote) java.lang.reflect.Proxy.newProxyInstance(
                 obj.getClass().getClassLoader(),
                 obj.getClass().getInterfaces(),
-                new VSInvocationHandler(new VSRemoteReference("localhost", 12345, objectId))
+                new VSInvocationHandler(new VSRemoteReference("localhost", port, objectId))
         );
-        try {
-            registry.bind(serviceName, stub);
-            System.out.println("Service " + serviceName + " is bound to registry with object ID " + objectId);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }   
         return stub;
     }
 

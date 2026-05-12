@@ -1,4 +1,4 @@
-package myrmi;
+package vsue.myrmi;
 
 import vsue.rmi.VSAuction;
 import vsue.rmi.VSAuctionEventHandler;
