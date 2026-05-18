@@ -3,7 +3,7 @@ package vsue.faults;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import vsue.rpc.ReplyMessage;
+import vsue.faults.ReplyMessage;
 import vsue.myrmi.VSConnection;
 import vsue.myrmi.VSObjectConnection;
 import vsue.rmi.VSAuctionService;
@@ -53,19 +53,15 @@ public class VSServer {
                     objectConnection.sendObject(
                             new ReplyMessage(
                                     result,
-                                    null
+                                    null,
+                                    request.getRequestID()
                             )
                     );
                 } catch (java.io.EOFException eof) {
                     /*
-                     *
-                     * 
-                     * 
                      * client disconnected normally
-                     *
-                     * 
-                     * 
                      */
+                    System.out.println("Client disconnected: " + clientSocket.getRemoteSocketAddress());   
                     break;
                 } catch (Exception e) {
                     System.err.println(
@@ -75,7 +71,8 @@ public class VSServer {
                     objectConnection.sendObject(
                             new ReplyMessage(
                                     null,
-                                    e
+                                    e,
+                                    null
                             )
                     );
                 }

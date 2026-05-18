@@ -18,6 +18,10 @@ public class VSConnection {
         this.out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
     }
 
+    public Socket getSocket() {
+        return socket;
+    }
+
     public synchronized void sendChunk(byte[] chunk) throws IOException {
         out.writeInt(chunk.length);  // 先发长度
         out.write(chunk);            // 再发数据

@@ -10,7 +10,7 @@ import java.net.Socket;
 import vsue.myrmi.VSConnection;
 
 public class VSObjectConnection {
-    private final VSConnection conn;
+    protected final VSConnection conn;
 
     public VSObjectConnection(String host, int port) throws IOException {
         this.conn = new VSConnection(new Socket(host, port));
@@ -20,6 +20,10 @@ public class VSObjectConnection {
     }
     public VSObjectConnection(VSConnection conn) {
         this.conn = conn;
+    }
+
+    public Socket getSocket() {
+        return conn.getSocket();
     }
 
     public void sendObject(Object obj) throws Exception {

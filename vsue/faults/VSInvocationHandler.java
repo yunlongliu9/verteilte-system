@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
 
 import vsue.faults.ReplyMessage;
 import vsue.myrmi.VSConnection;
-import vsue.myrmi.VSObjectConnection;
+import vsue.faults.VSObjectConnection;
 import vsue.rpc.VSRemoteReference;
 
 public class VSInvocationHandler implements Serializable,InvocationHandler  {
@@ -17,11 +17,16 @@ public class VSInvocationHandler implements Serializable,InvocationHandler  {
     private static long requestCounter = 0;
     private final String clientID = UUID.randomUUID().toString();
     private final static int MAX_RETRIES = 3; // Maximum number of retries for a remote method invocation
-
+    private transient VSObjectConnection injectedConnection;
     public VSRemoteReference getRemoteReference() {
         return remoteReference;
     }
     
+
+    public VSInvocationHandler(VSRemoteReference remoteReference, VSObjectConnection connection) {
+        this.remoteReference = remoteReference;
+        this.injectedConnection = connection;
+    }
 
     public VSInvocationHandler(VSRemoteReference remoteReference) {
         this.remoteReference = remoteReference;
@@ -29,22 +34,36 @@ public class VSInvocationHandler implements Serializable,InvocationHandler  {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        Socket socket = new Socket(
-            remoteReference.getHostIP(),
-            remoteReference.getPort()
-        );
+        VSObjectConnection connection =  injectedConnection;
+        Socket socket = null;
+        if (connection == null) {
+                socket = new Socket(
+                remoteReference.getHostIP(),
+                remoteReference.getPort()
+            );
+            connection =
+                new VSObjectConnection(
+                    new VSConnection(socket)
+                );
+        }
         VSRPCSemantic semantic = method.getAnnotation(VSRPCSemantic.class);
-        
-        VSObjectConnection connection = new VSObjectConnection(new VSConnection(socket));
+        System.out.println("Invoking method: " + method.getName());
         // Create a request message with the method name, parameters, and object ID
         VSRequestID requestID = new VSRequestID(clientID+"-"+ (++requestCounter), 0); // Generate a unique request ID for this invocation
         RequestMessage requestMessage = new RequestMessage(method.getName(), args, remoteReference.getObjectId(),requestID);; // Generate a unique request ID for this invocation
         ReplyMessage replyMessage = null;
         try{
+            System.out.println("Invoking method begin: " + method.getName() );  
         if (semantic != null ){ 
-            socket.setSoTimeout(3000); // Set a short timeout for at-most-once semantics
+            if (socket != null) {
+                socket.setSoTimeout(3000);
+            }else{
+                socket = connection.getSocket();
+                socket.setSoTimeout(3000);
+            }
             for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                     requestMessage.setSequenceNumber(attempt);
+                    System.out.println("Attempt " + attempt + " for method: " + method.getName());  
                     try{
                         connection.sendObject(requestMessage); // Send the request message to the server
                         // Send the request message to the server and receive a reply message
@@ -87,7 +106,9 @@ public class VSInvocationHandler implements Serializable,InvocationHandler  {
             System.err.println("⚠️  Exception occurred during remote method invocation: " + e.getMessage());
             throw e; // Rethrow the exception to be handled by the caller
         } finally {
-            connection.close();
+            if (injectedConnection == null) {
+                connection.close();
+            }
         }
         throw new RuntimeException("Unreachable");
     }

@@ -9,7 +9,7 @@ public class VSClientCallbackServer {
      *
      */
     private final int port;
-
+    private final VSAuctionEventHandler localHandler;
     private final VSAuctionEventHandler remoteStub;
     /*
      *
@@ -20,6 +20,7 @@ public class VSClientCallbackServer {
 
     public VSClientCallbackServer(VSAuctionEventHandler handler,int port) {
         this.port = port;
+        this.localHandler = handler;    
         try {
             this.remoteStub =(VSAuctionEventHandler)VSRemoteObjectManager.getInstance().exportObject(handler,port);
         } catch (Exception e) {
