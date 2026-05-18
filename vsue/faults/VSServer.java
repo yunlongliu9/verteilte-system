@@ -1,4 +1,4 @@
-package vsue.rpc;
+package vsue.faults;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -8,7 +8,7 @@ import vsue.myrmi.VSConnection;
 import vsue.myrmi.VSObjectConnection;
 import vsue.rmi.VSAuctionService;
 import vsue.rmi.VSAuctionServiceImpl;
-import vsue.rpc.VSRemoteObjectManager;
+
 
 
 public class VSServer {
@@ -47,7 +47,8 @@ public class VSServer {
                                     .invokeMethod(
                                             request.getObjectId(),
                                             request.getMethodName(),
-                                            request.getParameters()
+                                            request.getParameters(),
+                                            request.getRequestID()
                                     );
                     objectConnection.sendObject(
                             new ReplyMessage(

@@ -2,7 +2,8 @@ package vsue.rmi;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-
+import vsue.faults.VSRPCSemantic;
+import vsue.faults.VSRPCSemanticType;
 
 public interface VSAuctionService extends Remote {
 
@@ -15,6 +16,7 @@ public interface VSAuctionService extends Remote {
 	 * @throws VSAuctionException if the duration is negative or an auction
 	 *                            with the same name already exists
 	 */
+	@VSRPCSemantic(VSRPCSemanticType.AT_MOST_ONCE)
 	public void registerAuction(VSAuction auction, int duration, VSAuctionEventHandler handler) throws VSAuctionException, RemoteException;
 
 	/**
@@ -22,6 +24,7 @@ public interface VSAuctionService extends Remote {
 	 *
 	 * @return The auctions currently in progress.
 	 */
+	@VSRPCSemantic(VSRPCSemanticType.LAST_OF_MANY)
 	public VSAuction[] getAuctions() throws RemoteException;
 
 	/**
@@ -36,6 +39,7 @@ public interface VSAuctionService extends Remote {
 	 * @throws VSAuctionException if no auction with the specified name is
 	 *                            currently in progress
 	 */
+	@VSRPCSemantic(VSRPCSemanticType.AT_MOST_ONCE)
 	public boolean placeBid(String userName, String auctionName, int price, VSAuctionEventHandler handler) throws VSAuctionException, RemoteException;
 
 }

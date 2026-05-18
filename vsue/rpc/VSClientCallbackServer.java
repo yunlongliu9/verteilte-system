@@ -1,66 +1,53 @@
 package vsue.rpc;
 
-import java.rmi.RemoteException;
-
-import vsue.rmi.VSAuction;
 import vsue.rmi.VSAuctionEventHandler;
-import vsue.rmi.VSAuctionEventType;
 
-public class VSClientCallbackServer  {
+public class VSClientCallbackServer {
+    /*
+     *
+     * local callback RPC server
+     *
+     */
     private final int port;
-    private final VSAuctionEventHandler localHandler;
+
     private final VSAuctionEventHandler remoteStub;
+    /*
+     *
+     * embedded RPC server
+     *
+     */
     private final VSServer server;
+
     public VSClientCallbackServer(VSAuctionEventHandler handler,int port) {
         this.port = port;
-        this.localHandler = handler;
-        /*
-         * 
-         * export callback object
-         * 
-         */
         try {
-
-            this.remoteStub =
-
-                    (VSAuctionEventHandler)
-
-                    VSRemoteObjectManager
-
-                            .getInstance()
-
-                            .exportObject(
-
-                                    handler,
-
-                                    port
-
-                            );
-
+            this.remoteStub =(VSAuctionEventHandler)VSRemoteObjectManager.getInstance().exportObject(handler,port);
         } catch (Exception e) {
-
-            throw new RuntimeException(e);
-
+            throw new RuntimeException(
+                    "Failed to export callback handler",e
+            );
         }
-        /*
-         * 
-         * local callback rpc server
-         * 
-         */
+
         this.server = new VSServer(port);
     }
-    public void start() {
-        new Thread(() -> {
-            server.start();
-        }).start();
-    }
+
     /*
-     * 
-     * server side will use this
-     * 
+     *  callback listener
      */
+    public void start() {
+        Thread callbackThread =
+                new Thread(() -> {
+                    server.start();
+                });
+        callbackThread.setDaemon(true);
+        callbackThread.start();
+        System.out.println(
+                "Client callback server started on port "
+                        + port
+        );
+    }
+
     public VSAuctionEventHandler getStub() {
         return remoteStub;
     }
-
 }

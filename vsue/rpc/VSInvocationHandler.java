@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.net.Socket;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+
+import vsue.faults.ReplyMessage;
 import vsue.myrmi.VSConnection;
 import vsue.myrmi.VSObjectConnection;
 

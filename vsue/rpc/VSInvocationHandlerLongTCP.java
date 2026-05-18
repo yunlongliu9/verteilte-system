@@ -2,6 +2,8 @@ package vsue.rpc;
 
 import java.lang.reflect.InvocationHandler;
 import java.io.Serializable;
+
+import vsue.faults.ReplyMessage;
 import vsue.myrmi.VSConnection;
 import vsue.myrmi.VSObjectConnection;
 

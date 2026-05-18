@@ -1,4 +1,4 @@
-package vsue.rpc;
+package vsue.faults;
 
 import java.lang.reflect.Method;
 import java.rmi.Remote;
@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import vsue.faults.VSRequestID;
-
+import vsue.faults.ReplyMessage;
+import vsue.rpc.VSRemoteReference;
 import java.rmi.registry.LocateRegistry;
 
 public class VSRemoteObjectManager  {
@@ -21,7 +21,16 @@ public class VSRemoteObjectManager  {
     
     private static VSRemoteObjectManager instance =new VSRemoteObjectManager();
     private int nextObjectId = 1;
-    
+    private final Map<String, ReplyMessage> amoCache = Collections.synchronizedMap(
+        new LinkedHashMap<String, ReplyMessage>() {
+                @Override
+                protected boolean removeEldestEntry(
+                    Map.Entry<String, ReplyMessage> eldest
+                ) {
+                    return size() > 100;
+                }
+            }
+        );
     private VSRemoteObjectManager() {
            
     }
@@ -40,7 +49,8 @@ public class VSRemoteObjectManager  {
         return stub;
     }
 
-    public Object invokeMethod(int objectId, String methodName, Object[] parameters) throws Exception {
+    public Object invokeMethod(int objectId, String methodName, Object[] parameters,VSRequestID requestID) throws Exception {
+    
         Object obj = objectRegistry.get(objectId);
         if (obj == null) {
             throw new Exception("Object with ID " + objectId + " not found.");
@@ -49,7 +59,26 @@ public class VSRemoteObjectManager  {
         if (method == null) {
             throw new Exception("Method " + methodName + " not found in object with ID " + objectId);
         }
-        return method.invoke(obj, parameters);
+        VSRPCSemantic semantic = method.getAnnotation(VSRPCSemantic.class);
+        if (semantic != null && semantic.value() == VSRPCSemanticType.AT_MOST_ONCE){
+            String callID =  requestID.getCallID();
+            if (amoCache.containsKey(callID)) {
+                return amoCache
+                    .get(callID)
+                    .getResult();
+            }else{
+                Object result = method.invoke(obj, parameters);
+                amoCache.put(
+                        requestID.getCallID(),
+                        new ReplyMessage(
+                                result,
+                                null,
+                                requestID));
+                return result;
+            }
+        } else {
+            return method.invoke(obj, parameters);
+        }
     }
 
     private Method findMethod(Class<?> clazz,String methodName,Object[] parameters) {
