@@ -3,14 +3,15 @@ package vsue.rmi;
 public class VSAuctionData {
 
     private VSAuction auction;
-    private VSAuctionEventHandler creatorHandler;//creator handler
-    private VSAuctionEventHandler winnerHandler;//winner handler
+    private VSAuctionEventHandler creatorHandler;// creator handler
+    private VSAuctionEventHandler winnerHandler;// winner handler
 
     public VSAuctionData(VSAuction auction, VSAuctionEventHandler creatorHandler) {
         this.auction = auction;
         this.creatorHandler = creatorHandler;
+        this.winnerHandler = creatorHandler;// first bid price should belong to the creator
     }
-       
+
     public VSAuctionData(VSAuction auction, VSAuctionEventHandler creatorHandler, VSAuctionEventHandler winnerHandler) {
         this.auction = auction;
         this.creatorHandler = creatorHandler;

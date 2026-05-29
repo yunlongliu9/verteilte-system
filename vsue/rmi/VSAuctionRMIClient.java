@@ -1,140 +1,154 @@
 package vsue.rmi;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
+import java.rmi.*;
+import java.rmi.registry.*;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.List;
 
-
-public class VSAuctionRMIClient extends VSShell implements VSAuctionEventHandler {
-
-	// The user name provided via command line.
+public class VSAuctionRMIClient extends VSShell implements VSAuctionEventHandler
+{
 	private final String userName;
-	private VSAuctionService service;
+	private VSAuctionService auctionService;
+	private VSAuctionEventHandler handler;
 
-
-	public VSAuctionRMIClient(String userName) {
+	public VSAuctionRMIClient(String userName)
+	{
 		this.userName = userName;
 	}
 
+	public String getUsername(){
+		return userName;
+	}
 
 	// #############################
 	// # INITIALIZATION & SHUTDOWN #
 	// #############################
 
-	public void init(String registryHost, int registryPort) {
-		/*
-		 * TODO: Implement client startup code
-		 */
-		try{
-			// 1. 连接 registry
-			Registry registry = LocateRegistry.getRegistry("localhost", 1099);
-			// 2. 获取远程对象
-			this.service = (VSAuctionService) registry.lookup("VSAuctionService");
-			 // 3. 导出 callback（非常关键！！！）
-        	VSAuctionEventHandler stub = (VSAuctionEventHandler) UnicastRemoteObject.exportObject(this, 0);
-        	System.out.println("Client initialized");
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void shutdown() {
-		/*
-		 * TODO: Implement client shutdown code
-		 */
+	public void init(String registryHost, int registryPort)
+	{
+		final String auctionServiceName = "VSAuctionService";
+		// null, sonst meckert der Compiler unten, weil er meint, das könnte uninitialisiert benutzt werden
+		Registry registry = null;
 		try {
-			UnicastRemoteObject.unexportObject(this, true);
+			// Aus der Dokumentation:
+			// Note that a getRegistry call does not actually make a connection to the remote host.
+			// It simply creates a local reference to the remote registry and will succeed even if
+			// no registry is running on the remote host. Therefore, a subsequent method invocation
+			// to a remote registry returned as a result of this method may fail.
+			registry = LocateRegistry.getRegistry(registryHost, registryPort);
 		} catch (RemoteException e) {
-			e.printStackTrace();
+			System.err.println("Error: Could not create reference to Registry at " + registryHost + ":" + registryPort);
+			System.exit(1);
+		}
+		try {
+			auctionService = (VSAuctionService) registry.lookup(auctionServiceName);
+		} catch (RemoteException e) {
+			System.err.println("Error: remote communication with the registry failed");
+			System.err.println(e.getMessage());
+			System.exit(1);
+		} catch (NotBoundException e) {
+			System.err.println("Error: VSAuctionService \"" + auctionServiceName + "\" not bound at " + registryHost + ":" + registryPort);
+			System.exit(1);
+		}
+		try {
+			handler = (VSAuctionEventHandler) UnicastRemoteObject.exportObject(this, 0);
+		} catch (RemoteException e) {
+			System.err.println("Error: failed to export client as VSAuctionEventHandler");
+			System.exit(1);
 		}
 	}
 
+	public void shutdown()
+	{
+		try {
+			// Da wir den Client danach beenden, ist der Rückgabewert von unexportObject() egal.
+			UnicastRemoteObject.unexportObject(handler, true);
+		} catch (NoSuchObjectException e) {
+			// ignore (wir wissen, dass handler existiert)
+		}
+	}
 
 	// #################
 	// # EVENT HANDLER #
 	// #################
 
 	@Override
-	public void handleEvent(VSAuctionEventType event, VSAuction auction) {
-		/*
-		 * TODO: Implement event handler
-		 */
+	public void handleEvent(VSAuctionEventType event, VSAuction auction)
+	throws RemoteException
+	{
 		switch (event) {
-			case AUCTION_END:
-				System.out.println("Auction ended: " + auction.getName() + " with final price " + auction.getPrice());
-				break;
-			case HIGHER_BID:
-				System.out.println("Higher bid on " + auction.getName() + ": new price " + auction.getPrice());
-				break;
-			case AUCTION_WON:
-				System.out.println("You won the auction for " + auction.getName() + " with price " + auction.getPrice());
-				break;
+		case HIGHER_BID:
+			System.out.println("[Higher Bid] Auction \"" + auction.getName() + "\" now at " + auction.getPrice());
+			break;
+		case AUCTION_END:
+			System.out.println("[Auction End] Auction \"" + auction.getName() + "\" ended at " + auction.getPrice());
+			break;
+		case AUCTION_WON:
+			System.out.println("[Auction Won] Won auction \"" + auction.getName() + "\" (" + auction.getPrice() + ")");
+			break;
 		}
 	}
-
 
 	// ##################
 	// # CLIENT METHODS #
 	// ##################
 
-	public void register(String auctionName, int duration, int startingPrice) {
-		/*
-		 * TODO: Register auction
-		 */
+	public void register(String auctionName, int duration, int startingPrice)
+	{
+		VSAuction auction = new VSAuction(auctionName, startingPrice);
 		try {
-			VSAuction auction = new VSAuction(auctionName, startingPrice);
-			service.registerAuction(auction, duration, this);
-			System.out.println("Auction registered: " + auctionName);
-		} catch (VSAuctionException | RemoteException e) {
-			System.out.println("⚠️  " + e.getMessage());
-		}
-	}
-
-	public void list() {
-		/*
-		 * TODO: List all auctions that are currently in progress
-		 */
-		try {
-			VSAuction[] auctions = service.getAuctions();
-			if (auctions == null || auctions.length == 0) {
-				System.out.println("No auctions currently in progress.");
-				return;
-			}
-			for (VSAuction auction : auctions) {
-				System.out.println("- " + auction.getName());
-			}
+			auctionService.registerAuction(auction, duration, this);
+		} catch (VSAuctionException e) {
+			System.err.println("VSAuctionException: " + e.getMessage());
+			return;
 		} catch (RemoteException e) {
-			System.out.println("⚠️  " + e.getMessage());
+			System.err.println("RemoteException: " + e.getMessage());
+			return;
 		}
 	}
 
-	public void bid(String auctionName, int price) {
-		/*
-		 * TODO: Place a new bid
-		 */
+	public void list()
+	{
+		VSAuction[] auctions;
 		try {
-			boolean success = service.placeBid(userName, auctionName, price, this);
-			if (success) {
-				System.out.println("Bid placed successfully on " + auctionName + " with price " + price);
-			} else {
-				System.out.println("Failed to place bid on " + auctionName + " with price " + price);
+			auctions = auctionService.getAuctions();
+		} catch (RemoteException e) {
+			System.err.println("RemoteException: " + e.getMessage());
+			return;
+		}
+		if (auctions == null) {
+			System.out.println("There are no active auctions right now");
+		} else {
+			for (VSAuction auction : auctions) {
+				System.out.println(auction.getName() + ": " + auction.getPrice());
 			}
-		} catch (VSAuctionException | RemoteException e) {
-			System.out.println("⚠️  " + e.getMessage());
 		}
 	}
 
+	public void bid(String auctionName, int price)
+	{
+		boolean success;
+		try {
+			success = auctionService.placeBid(userName, auctionName, price, this);
+		} catch (VSAuctionException e) {
+			System.err.println("VSAuctionException: " + e.getMessage());
+			return;
+		} catch (RemoteException e) {
+			System.err.println("RemoteException: " + e.getMessage());
+			return;
+		}
+		if (success) {
+			System.out.println("Bid has been placed");
+		} else {
+			System.out.println("Bid has not been placed");
+		}
+	}
 
 	// #########
 	// # SHELL #
 	// #########
 
-	protected boolean processCommand(String[] args) {
+	protected boolean processCommand(String[] args)
+	{
 		switch (args[0]) {
 		case "help":
 		case "h":
@@ -175,24 +189,26 @@ public class VSAuctionRMIClient extends VSShell implements VSAuctionEventHandler
 		return true;
 	}
 
-
 	// ########
 	// # MAIN #
 	// ########
 
-	public static void main(String[] args) {
+	public static void main(String[] args)
+	{
 		checkArguments(args);
 		createAndExecuteClient(args);
 	}
 
-	private static void checkArguments(String[] args) {
+	private static void checkArguments(String[] args)
+	{
 		if (args.length < 3) {
-			System.err.println("usage: java " + VSAuctionRMIClient.class.getName() + " <user-name> <registry_host> <registry_port>");
+			System.err.println("parameters: <user-name> <registry_host> <registry_port>");
 			System.exit(1);
 		}
 	}
 
-	private static void createAndExecuteClient(String[] args) {
+	private static void createAndExecuteClient(String[] args)
+	{
 		String userName = args[0];
 		VSAuctionRMIClient client = new VSAuctionRMIClient(userName);
 

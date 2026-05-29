@@ -1,15 +1,32 @@
 package vsue.faults;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.io.Serializable;
+import java.util.UUID;
 
-public class VSRequestID implements Serializable {
+public class VSRequestID implements Externalizable {
 
-    private final String callID;
-    private int sequenceNumber;
+    private String callID;  // [temporary] modify später
+    private int sequenceNumber; // versuch mal
 
-    public VSRequestID(String callID, int sequenceNumber) {
+    public VSRequestID(){}
+
+    public VSRequestID(String username,String methodName) {
+        long timestampMillis = System.currentTimeMillis();
+        this.callID = username + methodName + timestampMillis;
+        this.sequenceNumber = 1;
+    }
+    
+    public VSRequestID(String callID, int seq ) {
         this.callID = callID;
-        this.sequenceNumber = sequenceNumber;
+        this.sequenceNumber = seq;
+    }
+
+    public void setCallID(String callID){
+        this.callID = callID;
     }
 
     public String getCallID() {
@@ -20,7 +37,19 @@ public class VSRequestID implements Serializable {
         return sequenceNumber;
     }
 
-    public void setSequenceNumber(int sequenceNumber) {
-        this.sequenceNumber = sequenceNumber;
+    public void setSequenceNumber(int neuVersuchAnzahl){
+        sequenceNumber = neuVersuchAnzahl;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeUTF(callID != null ? callID : "");
+        out.writeInt(sequenceNumber);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.callID = in.readUTF();
+        this.sequenceNumber = in.readInt();
     }
 }

@@ -1,17 +1,10 @@
-#!/bin/bash
 
-echo "Cleaning build directory..."
-rm -rf build
-mkdir -p build
+mkdir -p bin
 
-echo "Compiling Java files..."
+find vsue -name "*.java" > sources.txt
 
-# 编译整个 vsue 目录（更稳）
-javac -d build $(find vsue -name "*.java")
+javac -d bin @sources.txt
 
-if [ $? -ne 0 ]; then
-    echo "Compilation failed!"
-    exit 1
-fi
+rm sources.txt
 
-echo "Compilation successful ✅"
+echo "Build finished."
