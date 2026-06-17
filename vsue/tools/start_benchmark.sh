@@ -34,17 +34,17 @@ ssh -t "$USERNAME@$CLIENT" "cd $DIR && java -cp bin vsue.tools.VSAuctionLatencyB
 # Kill Server
 ssh "$USERNAME@$SERVER" "pkill -f vsue.rmi.VSAuctionRMIServer"
 
-# echo "============================================="
-# echo "Round 2: RPC Benchmark (connectionsReuse=false)"
-# echo "============================================="
-# echo "Starting RPC server on $SERVER with connectionsReuse=false..."
-# ssh "$USERNAME@$SERVER" "cd $DIR && nohup java -cp bin vsue.rpc.VSAuctionServer 1111 11111 false > /dev/null 2>&1 &" &
-# sleep 5
+echo "============================================="
+echo "Round 2: RPC Benchmark (connectionsReuse=false)"
+echo "============================================="
+echo "Starting RPC server on $SERVER with connectionsReuse=false..."
+ssh "$USERNAME@$SERVER" "cd $DIR && nohup java -cp bin vsue.rpc.VSAuctionServer 1111 11111 false > /dev/null 2>&1 &" &
+sleep 5
 
-# echo "Running RPC benchmark on $CLIENT"
-# ssh -t "$USERNAME@$CLIENT" "cd $DIR && java -cp bin vsue.tools.VSAuctionLatencyBenchmark rpc_noreuse $SERVER 11111 $MAX $STEP $SAMPLES >> output.csv"
+echo "Running RPC benchmark on $CLIENT"
+ssh -t "$USERNAME@$CLIENT" "cd $DIR && java -cp bin vsue.tools.VSAuctionLatencyBenchmark rpc_noreuse $SERVER 11111 $MAX $STEP $SAMPLES >> output.csv"
 
-# ssh "$USERNAME@$SERVER" "pkill -f vsue.rpc.VSAuctionServer"
+ssh "$USERNAME@$SERVER" "pkill -f vsue.rpc.VSAuctionServer"
 
 echo "============================================="
 echo "Round 3: RPC Benchmark (connectionsReuse=true)"

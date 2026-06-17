@@ -8,6 +8,9 @@ public class Response implements Externalizable {
     private Object result;
     private Throwable exception;
     private VSRequestID vsRequestID;
+    public long timeWhenThisWasSaved;
+    public String ID;
+    public int AMOcallID;
 
     public Response(Object result, Throwable exception, VSRequestID vsRequestID) {
         this.result = result;

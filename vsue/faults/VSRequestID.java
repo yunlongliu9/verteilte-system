@@ -15,8 +15,7 @@ public class VSRequestID implements Externalizable {
     public VSRequestID(){}
 
     public VSRequestID(String username,String methodName) {
-        long timestampMillis = System.currentTimeMillis();
-        this.callID = username + methodName + timestampMillis;
+        this.callID = username + methodName + UUID.randomUUID();
         this.sequenceNumber = 1;
     }
     

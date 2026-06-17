@@ -29,7 +29,7 @@ public class VSClientCallbackServer {
             this.callbackPort = serverSocket.getLocalPort();
             this.host = host;
             this.localHandler = handler;
-            this.manager = VSRemoteObjectManager.getInstance(host, callbackPort);
+            this.manager = VSRemoteObjectManager.getInstance(host, callbackPort, false);
             this.manager.username = username;
             // export local callback object
             this.remoteStub = this.manager.exportObject(localHandler);

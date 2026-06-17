@@ -20,9 +20,10 @@ public class VSObjectConnection
 	public Socket getSocket(){
 		return connection;
 	}
-    
-    private final byte[] javaHeader = { -84, -19, 0, 5 };
 	
+	public void setSocket(Socket socket) {
+	    this.connection = socket;
+    }	
 	
 	public void sendObject(Serializable s) throws IOException
 	{

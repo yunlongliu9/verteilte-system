@@ -18,6 +18,7 @@ import vsue.faults.VSRequestID;
 public class VSInvocationHandler implements InvocationHandler, Externalizable {
 	private VSRemoteReference remote;
 	private boolean reuseConnection;
+	private boolean useBuggyConnections;
 	private transient Socket socket;
 	private transient VSObjectConnection intercom;
 
@@ -26,12 +27,17 @@ public class VSInvocationHandler implements InvocationHandler, Externalizable {
 	}
 
 	public VSInvocationHandler(VSRemoteReference remote) {
-		this(remote, false);
+		this(remote, false, false);
 	}
 
 	public VSInvocationHandler(VSRemoteReference remote, boolean reuseConnection) {
+		this(remote, reuseConnection, false);
+	}
+
+	public VSInvocationHandler(VSRemoteReference remote, boolean reuseConnection, boolean useBuggyConnections) {
 		this.remote = remote;
 		this.reuseConnection = reuseConnection;
+		this.useBuggyConnections = useBuggyConnections;
 	}
 
 	private VSRPCSemanticHandler dispatchSemanticHandler(Method method){
@@ -65,7 +71,7 @@ public class VSInvocationHandler implements InvocationHandler, Externalizable {
 	}
 
 	private Request requestBuild(Method method, Object[] args){
-		Request request = new Request(remote.getObjectID(), method.toGenericString().hashCode(), args,new VSRequestID(VSRemoteObjectManager.username,method.getName()));
+		Request request = new Request(remote.getObjectID(), method.toGenericString().hashCode(), args,new VSRequestID(VSRemoteObjectManager.username,method.getName()), VSRemoteObjectManager.username);
 		return request;
 	}
 
@@ -75,36 +81,48 @@ public class VSInvocationHandler implements InvocationHandler, Externalizable {
 		VSRPCSemanticHandler handler = dispatchSemanticHandler(method);
 		Request request = requestBuild(method,args);
 
-		if (!reuseConnection) {
-			try (Socket socket = new Socket(remote.getHost(), remote.getPort())) {
-				socket.setTcpNoDelay(true);
-				VSObjectConnection connection = new VSObjectConnection(socket);
-				if (callBackCheck(request, method, connection)) {
-					return null;
-				}
-				return handler.invoke(
-						this,
-						request,
-						method,
-						connection);
-			}
-		} else {
-			if (intercom == null) {
-				socket = new Socket(remote.getHost(), remote.getPort());
-				socket.setTcpNoDelay(true);
-				intercom = new VSObjectConnection(socket);
-			}
-			if (callBackCheck(request, method, intercom)) {
-				return null;
-			}
-			return handler.invoke(
-					this,
-					request,
-					method,
-					intercom);
-		}
+        try {
+            if (!reuseConnection) {
+                try (Socket socket = new Socket(remote.getHost(), remote.getPort())) {
+                    VSObjectConnection connection = createConnection(socket);
+                    if (callBackCheck(request, method, connection)) {
+                        return null;
+                    }
+                    return handler.invoke(
+                        this,
+                        request,
+                        method,
+                        connection);
+                }
+            } else {
+                // Reuse connection: create if not exists, otherwise use existing one
+                if (intercom == null) {
+                    socket = new Socket(remote.getHost(), remote.getPort());
+                    intercom = createConnection(socket);
+                }
+                if (callBackCheck(request, method, intercom)) {
+                    return null;
+                }
+                return handler.invoke(
+                        this,
+                        request,
+                        method,
+                        intercom);
+            }
+        } catch (java.io.IOException e) {
+            throw new java.rmi.RemoteException("Network connection failed", e);
+        }
 	}
 
+	// Hilfsmethode zum Erstellen einer Verbindung, abhängig von der Einstellung für fehlerhafte Verbindungen
+	private VSObjectConnection createConnection(Socket socket) throws IOException {
+	    socket.setTcpNoDelay(true);
+	    if (useBuggyConnections) {
+		    return new VSBuggyObjectConnection(socket);
+	    } else {
+		    return new VSObjectConnection(socket);
+	    }
+	}
 
 	public Response transportProcess(Request request, VSObjectConnection connection) throws Throwable {
 		try {

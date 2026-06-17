@@ -9,6 +9,7 @@ import java.rmi.Remote;
 public class VSAuctionServer extends VSAuctionRMIServer {
     
     private static final int RPC_PORT = 1111; //Standardport für den VSRemoteObjectManager
+    private static final boolean USE_BUGGY_CONNECTIONS = true; // Buggy-Verbindungen aktivieren
     
     public static void main(String[] args) {
         int rpcPort = RPC_PORT;
@@ -35,7 +36,7 @@ public class VSAuctionServer extends VSAuctionRMIServer {
             // VSServer in eigenem Thread starten und system out weiterleiten
             new Thread(() -> {
                 try {
-                    VSServer server = new VSServer(finalRpcPort);
+                    VSServer server = new VSServer(finalRpcPort, USE_BUGGY_CONNECTIONS);
                     server.start();
                 } catch (Exception e) {
                     System.err.println("[VSAuctionServer] Server error: " + e.getMessage());
@@ -46,7 +47,7 @@ public class VSAuctionServer extends VSAuctionRMIServer {
 
             
             // Remote-Objekt mit VSRemoteObjectManager exportieren
-            Remote vsproxy = VSRemoteObjectManager.getInstance(hostname, rpcPort).exportObject(auctionService, reuseConnections);
+            Remote vsproxy = VSRemoteObjectManager.getInstance(hostname, rpcPort, USE_BUGGY_CONNECTIONS).exportObject(auctionService, reuseConnections);
 
             // Eigene Klassen erlauben
             System.setProperty("sun.rmi.registry.registryFilter", "vsue.**");
@@ -58,6 +59,7 @@ public class VSAuctionServer extends VSAuctionRMIServer {
             System.out.println("[VSAuctionServer] RPC-Port: " + rpcPort);
             System.out.println("[VSAuctionServer] Registry-Port: " + registryPort);
             System.out.println("[VSAuctionServer] Wiederverwendete Verbindungen: " + reuseConnections);
+            System.out.println("[VSAuctionServer] Buggy-Verbindungen: " + USE_BUGGY_CONNECTIONS);
             System.out.println("[VSAuctionServer] Service VSAuctionService registriert an " + hostname + ":" + registryPort);
             
             Thread.sleep(Long.MAX_VALUE);
