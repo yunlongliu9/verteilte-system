@@ -1,0 +1,4 @@
+# replace with real hostnames and ports
+replica0=localhost:12345
+replica1=localhost:12346
+replica2=localhost:12347
