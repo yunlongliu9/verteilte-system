@@ -34,7 +34,7 @@ public class VSCounterReplica {
 			System.out.println("    " + i + " " + protocolAddresses[i] + ((replicaId == i) ? " <-- this replica" : ""));
 		}
 
-		// Use separate ports for the registry of the protocol
+		// server和client交互的应用层的ip+port;这里registry端口和计数端口是同一个.都作为对服务器的访问入口
 		InetSocketAddress[] appAddresses = deriveClientAddresses(protocolAddresses);
 
 		// Reduce handshakeTimeout to a reasonable value
@@ -46,7 +46,7 @@ public class VSCounterReplica {
 		// Create application and protocol
 		VSRaftProtocol protocol = new VSRaftProtocol(replicaId, protocolAddresses);
 		VSCounterServer app = new VSCounterServer(protocol, replicaId, protocolAddresses.length);
-		// Start everything
+		// 让计数器服务器（Application）在指定的端口(客户端从这个端口找到计数服务)上启动一个 RMI Registry
 		app.init(appAddresses[replicaId].getPort());
 
 		// keep on running
