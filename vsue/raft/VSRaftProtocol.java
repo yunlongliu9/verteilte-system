@@ -117,7 +117,7 @@ public class VSRaftProtocol implements VSRaftProtocolService {
 		// Register server
 		Registry registry = LocateRegistry.createRegistry(addresses[myId].getPort());
 		try {
-			registry.bind("RAFT", stub);
+			registry.bind("RAFT", this);
 		} catch (AlreadyBoundException e) {
 			throw new RemoteException("Don't bind twice", e);
 		}

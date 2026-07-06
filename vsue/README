@@ -1,0 +1,70 @@
+----------------------------------------
+Aufruf des Testskripts (distribute.sh)
+----------------------------------------
+
+$ ./distribute.sh <simple/simple-try/fancy/fancy-try/debug/debug-try> [<path_to_class_files>] [<path_to_hosts_file>]
+
+Das Testskript muss auf einem CIP-Pool-Rechner ausgeführt werden.
+
+Der erste Parameter spezifiziert die Art des Testfalls ('simple', 'simple-try', 'fancy', 'fancy-try', 'debug' oder 'debug_try'). Parameter 2 und 3 sind optional. Werden diese weggelassen, muss dafür gesorgt werden, dass sowohl das distribute.sh-Skript als auch die Konfigurationsdatei (my_hosts) im selben Verzeichnis wie die Class-Dateien liegen.
+
+Vor dem Aufruf ist darauf zu achten, dass mindestens drei beliebige CIP-Pool-Rechner in die Datei 'my_hosts' eingetragen wurden.
+
+
+------------------
+Ablauf des Tests
+------------------
+
+* 'distribute.sh' liest 'my_hosts' ein und startet via SSH auf allen dort angegebenen Rechnern einen Prozess der Testanwendung 'vsue.lamport.VSLamportTest'.
+  
+* Die Prozesse erstellen ein 'VSClusterImpl'-Objekt und verbinden sich darüber miteinander.
+
+* Jeder Prozess wartet so lange, bis er die Verbindung zu allen anderen Prozessen aufgebaut hat.
+
+* Nun wird -- abhängig von der Wahl des Testfalls ('simple', 'simple-try', 'fancy' oder 'fancy-try') -- ein etwa einminütiger Testfall gestartet, der in einer Schleife lock()- und unlock()-Aufrufe durchführt. Im einfachen Fall ('simple') erfolgt das bloße Senden dieser Anfragen. Der erweiterte Testfall ('fancy') simuliert dagegen Transaktionen zwischen Konten: Initial erhält jeder Prozess auf seinem Konto einen zufällig gewählten Betrag (maximaler Betrag pro Prozess: 1000). Im kritischen Abschnitt werden anschließend entweder (a) die Kontostände aller Prozesse per Fernaufruf ermittelt und aufsummiert ausgegeben ("Sum is ...") oder (b) Überweisungen vom Konto eines Prozesses auf das Konto eines anderen Prozesses getätigt. Somit ändern sich zwar die Guthaben auf den betroffenen Konten, ihre Gesamtsumme bleibt aber stets gleich -- sofern der Synchronisationsmechanismus funktioniert. Die beiden Testfälle 'simple-try' und 'fancy-try' unterscheiden sich dadurch von der jeweiligen Basisvariante, dass bei ihnen kritische Abschnitte nur dann betreten werden, wenn die Erlaubnis dazu innerhalb einer gewissen Zeit nach Absetzen der Sperranfrage eintrifft.
+
+* Im Verzeichnis der Konfigurationsdateien wird jeweils eine Log-Datei pro Prozess abgelegt (Dateinamen: 'vslocktest.simple.*.log', 'vslocktest.simple-try.*.log', 'vslocktest.fancy.*.log' bzw. 'vslocktest.fancy-try.*.log').
+
+* Nach etwa einer Minute sollten sich (kein Deadlock vorausgesetzt) die Tests erkennbar beendet haben. Um herauszufinden, ob die Tests tatsächlich erfolgreich waren, kann das Skript 'checklogs.sh' verwendet werden.
+
+* Bei der Fehlersuche können die Testfälle 'debug' und 'debug_try' helfen. Diese testen verschiedene lock()-Aufrufmuster bzw. Nachrichtenmuster, die häufig zu Fehlern in den 'simple' oder 'fancy' Testfällen führen. Für jedes Testmuster wird eine kurze Beschreibung ausgegeben, welches Fehlverhalten abgeprüft wird. Nach einem vollständigen, erfolgreichen Durchlauf gibt der Testfall "SUCCESS" aus. Die Testfälle 'simple' und 'fancy' müssen weiterhin getestet werden.
+
+-----------------------------------------------
+Aufruf des Überprüfungsskripts (checklogs.sh)
+-----------------------------------------------
+
+$ ./checklogs.sh [<path_to_log_files>]
+
+Optionaler Parameter: Pfad zum Verzeichnis der Log-Dateien.
+
+Dieses Skript prüft bei allen Varianten, ob das eingestellte Zeitintervall (1 Min.) ohne Deadlock überstanden wurde. Bei den fancy-Testfällen wird darüber hinaus überprüft, ob sich die Ausgaben der Summen ("Sum is ..."-Zeilen) unterscheiden. Ist dies nicht der Fall, gilt dieser Test als bestanden.
+
+
+-------------------------------------
+Manuelles Starten der Tests per IDE
+-------------------------------------
+
+Zur Fehlersuche kann es hilfreich sein, die Testfälle direkt aus der IDE zu starten. Hierzu muss das Verhalten des distribute.sh-Skripts nachgebildet werden und zusätzlich alle Prozesse lokal gestartet werden.
+
+Dafür ist es einerseits notwendig, dass `my_hosts` nur `localhost`-Einträge enthält. Zur Verwendung von drei Prozessen muss der Dateiinhalt also wie folgt aussehen:
+```
+localhost
+localhost
+localhost
+```
+
+Anschließend muss die IDE so konfiguriert werden, dass diese drei Prozesse nach folgendem Muster Aufruf startet:
+
+java -cp <path_to_class_files> -ea -Dconfigs_path=<path_to_hosts_file> vsue.lamport.VSLamportTest <process_ID> <base_port> <simple/simple-try/fancy/fancy-try/debug/debug-try>
+
+`path_to_class_files` muss die die gebauten class-Files enthalten (inklusive vsue/lamport Ordnern)
+`path_to_hosts_file` zeigt auf den Ordner, der die `my_hosts` enthält.
+`process_ID` ist die ID des Prozesses, diese beginnt bei null und muss zwischen Prozessen um eins hochgezählt werden.
+`base_port` ist die Basis-Portnummer, von der ausgehend jeder Prozess einen eigenen Port ermittelt. Hierfür muss jedem Prozess dieselbe Basis-Portnummer übergeben werden.
+
+Zum Starten des 'simple' Testfalls könnten beispielsweise folgende Aufrufe verwendet werden:
+```
+java -cp bin -ea -Dconfigs_path=. vsue.lamport.VSLamportTest 0 12345 simple
+java -cp bin -ea -Dconfigs_path=. vsue.lamport.VSLamportTest 1 12345 simple
+java -cp bin -ea -Dconfigs_path=. vsue.lamport.VSLamportTest 2 12345 simple
+```
